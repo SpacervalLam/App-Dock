@@ -1,0 +1,251 @@
+/* ================= 禁止文字选中 & 禁止图片/图标拖动 ================= */
+.ipad-window,
+.ipad-window * {
+  user-select: none !important;
+  -webkit-user-select: none !important;
+  -moz-user-select: none !important;
+  -ms-user-select: none !important;
+  -webkit-touch-callout: none !important;
+}
+.ipad-window img,
+.ipad-window .ipad-app-icon {
+  -webkit-user-drag: none !important;
+  user-drag: none !important;
+}
+
+/* ================= iPad 窗口的背景容器 ================= */
+:root {
+  --ipad-bg: #ffffff; /* 默认纯白，不透明 */
+}
+.ipad-window {
+  position: fixed;
+  top: 10vh;               /* 上下各预留 10% 高度留白 */
+  left: calc(100% - var(--ipad-width));
+  width: var(--ipad-width);
+  height: 80vh;            /* 保持 80vh 高度 */
+  background: var(--ipad-bg);
+  border-radius: 30px;
+  box-shadow: -8px 8px 40px rgba(0, 0, 0, 0.2);
+  overflow: hidden;
+  transition: left 0.3s ease-in-out;
+  display: flex;
+  flex-direction: column;
+  z-index: 1100; /* 确保在 Dock (z-index:1000) 上方 */
+}
+
+/* ================= 顶部状态栏 ================= */
+.ipad-header {
+  height: 60px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 24px;
+  font-family: -apple-system, BlinkMacSystemFont, "Helvetica Neue", "Segoe UI", sans-serif;
+  position: relative;
+  z-index: 10;
+}
+
+.ipad-status-time {
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 1.4;
+  text-align: center;
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.ipad-status-time .time {
+  font-weight: 600;
+}
+
+.ipad-status-time .date {
+  opacity: 0.8;
+  font-size: 14px;
+  white-space: nowrap;
+}
+
+.ipad-status-icons {
+  display: flex;
+  gap: 2px;
+  font-size: 16px;
+  align-items: center;
+}
+
+
+
+.ipad-status-icons span {
+  display: inline-flex;
+  align-items: center;
+}
+
+/* 暗黑模式适配 - 仅设置背景色 */
+.ipad-dark .ipad-header {
+  background: transparent;
+}
+
+/* ================= 应用图标网格区域 ================= */
+.ipad-grid {
+  flex: 1;
+  background: transparent;
+  padding: 16px;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(64px, 1fr));
+  grid-auto-rows: var(--grid-row-height);
+  gap: var(--grid-gap);
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(0,0,0,0.2) transparent;
+  transition: all 0.3s ease;
+}
+
+.ipad-grid.dense {
+  --grid-gap: 16px;
+  --grid-row-height: 88px;
+}
+
+.ipad-grid.sparse {
+  --grid-gap: 120px;
+  --grid-row-height: 58px;
+  padding-left: 100px; 
+  padding-right: 100px;
+  padding-top: 65px;
+  padding-bottom: 65px;
+}
+.ipad-grid::-webkit-scrollbar {
+  width: 6px;
+}
+.ipad-grid::-webkit-scrollbar-track {
+  background: transparent;
+}
+.ipad-grid::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 3px;
+}
+
+.ipad-app-icon {
+  width: 60px;
+  height: 60px;
+  background-color: #fff;
+  border-radius: 15px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  margin: 0 auto;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+.ipad-app-icon::after {
+  content: attr(data-label);
+  position: absolute;
+  bottom: -18px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 10px;
+  color: #333;
+  white-space: nowrap;
+  font-family: -apple-system, BlinkMacSystemFont, "Helvetica Neue", "Segoe UI", sans-serif;
+}
+.ipad-app-icon:hover {
+  transform: translateY(-4px) scale(1.05);
+  box-shadow: 0 6px 14px rgba(0, 0, 0, 0.15);
+  cursor: pointer;
+}
+
+/* ================= 底部 Dock 区域 ================= */
+.ipad-footer {
+  height: 80px;
+  background: rgba(255, 255, 255, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 40px;
+  border-radius: 24px;
+  margin: 0 115px 20px;
+  backdrop-filter: blur(20px) saturate(180%);
+  -webkit-backdrop-filter: blur(20px) saturate(180%);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  box-shadow: 0 -8px 32px rgba(0, 0, 0, 0.1);
+  transition: all 0.3s ease;
+}
+
+.ipad-footer .ipad-app-icon {
+  width: 50px;
+  height: 50px;
+  background: rgba(255, 255, 255, 0.7);
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  transition: all 0.2s cubic-bezier(0.25, 0.1, 0.25, 1);
+}
+
+.ipad-footer .ipad-app-icon:hover {
+  transform: translateY(-6px) scale(1.15);
+  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.15);
+}
+
+/* 暗黑模式 */
+.ipad-dark .ipad-window {
+  background: var(--ipad-bg);
+  filter: brightness(0.7);
+}
+
+.ipad-dark .ipad-footer {
+  background: rgba(44, 44, 46, 0.6);
+  border-color: rgba(255, 255, 255, 0.1);
+}
+
+.ipad-dark .ipad-footer .ipad-app-icon {
+  background: rgba(60, 60, 60, 0.7);
+}
+
+.ipad-dark .ipad-footer .ipad-app-icon:hover {
+  background: rgba(80, 80, 80, 0.8);
+}
+.ipad-dark .ipad-footer .ipad-app-icon::after {
+  color: #fff;
+}
+
+/* 截屏保存目录样式 */
+.screenshot-path {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.path-text {
+  flex: 1;
+  font-size: 14px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: #666;
+}
+
+.ipad-dark .path-text {
+  color: #aaa;
+}
+
+.path-btn {
+  padding: 6px 12px;
+  font-size: 14px;
+  border-radius: 6px;
+  border: none;
+  background: rgba(0, 122, 255, 0.1);
+  color: #007aff;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.path-btn:hover {
+  background: rgba(0, 122, 255, 0.2);
+}
+
+.ipad-dark .path-btn {
+  background: rgba(10, 132, 255, 0.2);
+  color: #0a84ff;
+}
+
+.ipad-dark .path-btn:hover {
+  background: rgba(10, 132, 255, 0.3);
+}

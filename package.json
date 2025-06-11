@@ -1,0 +1,65 @@
+{
+  "name": "app-dock",
+  "version": "1.0.0",
+  "description": "Electron + Vue Dock Demo",
+  "main": "electron/main.js",
+  "scripts": {
+    "dev": "vite",
+    "serve": "concurrently \"npm run dev\" \"npm run electron:dev\"",
+    "electron:dev": "electron .",
+    "build": "vite build && electron-builder",
+    "pack": "electron-builder --dir",
+    "dist": "electron-builder"
+  },
+  "author": "SpacervalLam <spacervallam@gmail.com>",
+  "license": "MIT",
+  "dependencies": {
+    "pinia": "^2.0.0",
+    "tesseract.js": "^6.0.1",
+    "tesseract.js-core": "^6.0.0"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-vue": "^4.1.0",
+    "concurrently": "^7.0.0",
+    "electron": "^25.0.0",
+    "electron-builder": "^23.0.0",
+    "vite": "^4.5.14",
+    "vue": "^3.2.0"
+  },
+  "build": {
+    "appId": "io.github.SpacervalLam.app-dock",
+    "productName": "App Dock",
+    "files": [
+      "dist/**",
+      "public/**",
+      "electron/**",
+      "package.json"
+    ],
+    "directories": {
+      "buildResources": "public",
+      "output": "dist"
+    },
+    "asar": true,
+    "nsis": {
+      "oneClick": false,
+      "perMachine": false,
+      "allowElevation": true,
+      "warningsAsErrors": false,
+      "installerIcon": "public/images/icon.ico",
+      "uninstallerIcon": "public/images/icon.ico",
+      "installerHeaderIcon": "public/images/icon.ico",
+      "allowToChangeInstallationDirectory": true,
+      "installerSidebar": "public/images/banner_welcome.bmp",
+      "installerHeader": "public/images/banner_header.bmp"
+    },
+    "win": {
+      "target": "nsis",
+      "icon": "public/images/icon.ico"
+    },
+    "publish": {
+      "provider": "github",
+      "repo": "app-dock",
+      "owner": "SpacervalLam"
+    }
+  }
+}

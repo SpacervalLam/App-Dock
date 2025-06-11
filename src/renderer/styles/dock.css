@@ -1,0 +1,163 @@
+/* ================= 禁止文字选中 & 禁止图片/图标拖动 ================= */
+.dock-wrapper,
+.dock-wrapper * {
+  user-select: none !important;
+  -webkit-user-select: none !important;
+  -moz-user-select: none !important;
+  -ms-user-select: none !important;
+  -webkit-touch-callout: none !important;
+}
+.dock-wrapper img,
+.dock-wrapper .dock-icon,
+.dock-wrapper .breathing-light {
+  -webkit-user-drag: none !important;
+  user-drag: none !important;
+}
+
+/* ================= 呼吸灯样式 ================= */
+.dock-wrapper {
+  position: fixed;
+  top: 0;
+  right: 0;
+  width: 150px;
+  height: 100vh;
+  pointer-events: none;
+  z-index: 1000;
+}
+.breathing-light {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 6px;
+  height: 100%;
+  border-top-left-radius: 6px;
+  border-bottom-left-radius: 6px;
+  animation: breathe-blue 3.5s infinite cubic-bezier(0.3, 0, 0.2, 1);
+  pointer-events: auto;
+  cursor: pointer;
+  overflow: hidden;
+  filter: blur(1px);
+}
+.breathing-light::before,
+.breathing-light::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  border-radius: inherit;
+}
+.breathing-light::before {
+  background: linear-gradient(
+    90deg,
+    rgba(0, 210, 255, 0.4),
+    rgba(100, 240, 255, 0.6)
+  );
+  z-index: 2;
+  filter: blur(0.5px);
+}
+.breathing-light::after {
+  background: linear-gradient(
+    90deg,
+    rgba(0, 120, 255, 0.2),
+    rgba(0, 200, 255, 0.3)
+  );
+  z-index: 1;
+  transform: scaleX(2);
+  filter: blur(3px);
+}
+@keyframes breathe-blue {
+  0%, 100% {
+    opacity: 0.6;
+    box-shadow:
+      0 0 5px rgba(0, 180, 255, 0.3),
+      0 0 15px rgba(0, 150, 255, 0.15),
+      0 0 30px rgba(0, 120, 255, 0.1);
+  }
+  50% {
+    opacity: 0.9;
+    box-shadow:
+      0 0 20px rgba(0, 220, 255, 0.6),
+      0 0 40px rgba(0, 180, 255, 0.3),
+      0 0 60px rgba(0, 150, 255, 0.2);
+  }
+}
+.breathing-light:hover {
+  animation-play-state: paused;
+  opacity: 0.95 !important;
+  box-shadow:
+    0 0 20px rgba(0, 220, 255, 1),
+    0 0 40px rgba(0, 150, 255, 0.6) !important;
+}
+
+/* ================= Dock 容器 & 内容样式 ================= */
+.dock-container {
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 150px;
+  height: 100vh;
+  transform: translateX(150px);
+  transition: transform 0.25s ease-out;
+  z-index: 900;
+  pointer-events: none;
+}
+.dock-container.active {
+  transform: translateX(0);
+  pointer-events: auto;
+}
+.dock {
+  position: absolute;
+  top: 40px;
+  right: 10px;
+  width: 140px;
+  height: calc(100% - 80px);
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(30px) saturate(180%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding-top: 0;
+  border-radius: 16px;
+  box-shadow:
+    -8px 0 32px rgba(0, 0, 0, 0.15),
+    0 0 0 1px rgba(255, 255, 255, 0.1),
+    inset 0 1px 0 rgba(255, 255, 255, 0.3);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* Dock 图标区 */
+.dock-icons {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-around;
+  height: 100%;
+  padding: 20px 0;
+  gap: 16px;
+}
+.dock-icon {
+  width: 48px;
+  height: 48px;
+  background: rgba(255, 255, 255, 0.8);
+  border-radius: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  font-weight: 500;
+  color: #333333;
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  box-shadow:
+    0 4px 12px rgba(0, 0, 0, 0.08),
+    inset 0 1px 1px rgba(255, 255, 255, 0.4);
+}
+.dock-icon:hover {
+  background: rgba(255, 255, 255, 0.95);
+  transform: scale(1.1) translateY(-4px);
+  box-shadow:
+    0 8px 24px rgba(0, 0, 0, 0.15),
+    inset 0 2px 4px rgba(255, 255, 255, 0.5);
+}
