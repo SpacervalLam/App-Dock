@@ -1,5 +1,5 @@
 <template>
-  <div class="ipad-window" :style="{
+  <div ref="ipadWindowRef" class="ipad-window" :style="{
     '--ipad-width': width + 'px',
     transition: 'left 0.3s ease-out'
   }" @mousedown.stop @click.stop>
@@ -20,8 +20,78 @@
     <div class="ipad-content">
       <!-- Home Screen -->
       <div v-if="currentView === 'home'" class="ipad-grid" :class="settings.layoutMode">
-        <div class="ipad-app-icon" v-for="n in 20" :key="n" :data-label="`App ${n}`" @click="onAppClick(n)">
-          <!-- 占位图标 -->
+        <div 
+          class="ipad-app-icon" 
+          v-for="(app, index) in settings.apps" 
+          :key="index"
+          :data-label="app.name"
+          @click="launchApp(app)"
+          @contextmenu.prevent="showContextMenu($event, index)"
+        >
+          <img v-if="app.icon" :src="app.icon" class="app-icon" />
+          <span v-else>📱</span>
+        </div>
+        
+        <!-- 右键菜单 -->
+        <div 
+          v-if="contextMenu.visible" 
+          class="context-menu" 
+          :style="{
+            left: contextMenu.x + 'px',
+            top: contextMenu.y + 'px'
+          }"
+          @click.stop
+        >
+          <div v-if="contextMenu.appIndex === -1" class="menu-item" @click="addApp">添加APP</div>
+          <div v-if="contextMenu.appIndex !== -1" class="menu-item" @click="removeApp(contextMenu.appIndex)">删除</div>
+        </div>
+        
+        <!-- 添加APP模态框 -->
+        <div v-if="showAddAppModal" class="modal-overlay" @click.self="showAddAppModal = false">
+          <div class="modal-content">
+            <h3>添加快捷方式</h3>
+            
+            <!-- 预览区域 -->
+            <div class="preview-section">
+              <div class="preview-icon">
+                <img v-if="appIconPreview" :src="appIconPreview" class="app-icon-preview">
+                <span v-else>📱</span>
+              </div>
+              <div class="preview-label">{{ newApp.name || '应用名称' }}</div>
+            </div>
+
+            <div class="form-group">
+              <label>应用路径 <span class="required">*</span></label>
+              <div class="path-input-group">
+                <input 
+                  v-model="newApp.path" 
+                  type="text" 
+                  placeholder="输入应用路径或点击浏览选择" 
+                  required
+                  @input="handlePathChange"
+                  @keyup.enter="handlePathChange"
+                >
+                <button class="browse-btn" @click="selectAppPath">浏览</button>
+              </div>
+              <p class="form-hint">必填，有效的应用路径</p>
+            </div>
+            
+            <div class="form-group">
+              <label>应用名称 <span class="required">*</span></label>
+              <input v-model="newApp.name" type="text" placeholder="可自动从路径提取" required>
+            </div>
+
+            <div class="form-actions">
+              <button class="cancel-btn" @click="showAddAppModal = false">取消</button>
+              <button 
+                class="confirm-btn" 
+                @click="confirmAddApp"
+                :disabled="!newApp.name || !newApp.path"
+              >
+                确认
+              </button>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -109,10 +179,102 @@ export default {
       wallpaper: "",
       layoutMode: "dense",
       screenshotPath: "",
-      isWhiteText: false
+      isWhiteText: false,
+      apps: []
     });
 
-    // 单字段 watch，保存并立即更新 CSS
+    const contextMenu = reactive({
+      visible: false,
+      x: 0,
+      y: 0,
+      appIndex: -1
+    });
+
+    // 确保右键菜单点击外部时关闭
+    const closeContextMenu = (e) => {
+      if (!contextMenu.visible) return;
+      
+      const menu = document.querySelector('.context-menu');
+      const clickedInsideMenu = menu && menu.contains(e.target);
+      
+      console.log('Close check - clicked inside menu:', clickedInsideMenu);
+      
+      if (!clickedInsideMenu) {
+        console.log('Closing context menu');
+        contextMenu.visible = false;
+        e.stopPropagation();
+        e.preventDefault();
+      }
+    };
+
+    onMounted(() => {
+      ipadWindowRef.value = document.querySelector('.ipad-window');
+      
+      // 使用passive事件监听器提高性能
+      const options = { capture: true, passive: false };
+      document.addEventListener('click', closeContextMenu, options);
+      document.addEventListener('contextmenu', closeContextMenu, options);
+      
+      console.log('Context menu handlers registered with options:', options);
+    });
+    
+    onUnmounted(() => {
+      document.removeEventListener('click', closeContextMenu, true);
+      document.removeEventListener('contextmenu', closeContextMenu, true);
+    });
+
+    const showAddAppModal = ref(false);
+    const newApp = reactive({
+      name: '',
+      path: '',
+      icon: '',
+      workingDir: ''
+    });
+
+    const appIconPreview = ref('');
+    
+    const selectAppPath = async () => {
+      console.log('点击浏览按钮');
+      try {
+        const result = await window.electronAPI.showOpenDialog({
+          properties: ['openFile'],
+          filters: [
+            { name: 'Applications', extensions: ['exe', 'app', 'lnk'] },
+            { name: 'All Files', extensions: ['*'] }
+          ]
+        });
+        console.log('对话框返回结果:', result);
+        if (!result.canceled && result.filePaths?.length) {
+          newApp.path = result.filePaths[0];
+          handlePathChange(newApp.path);
+        }
+      } catch (err) {
+        console.error('打开文件对话框失败:', err);
+      }
+    };
+
+    const handlePathChange = (path) => {
+      path = path || newApp.path;
+      try {
+        if (path) {
+          // 提取应用名称 (不含扩展名)
+          const fileName = path.split('\\').pop().split('/').pop();
+          const appName = fileName.replace(/\.[^/.]+$/, '');
+          newApp.name = appName;
+          
+          window.electronAPI.getAppIcon(path).then(icon => {
+            appIconPreview.value = icon;
+            newApp.icon = icon;
+          }).catch(() => {
+            appIconPreview.value = '';
+            newApp.icon = '';
+          });
+        }
+      } catch (err) {
+        console.error('解析路径失败:', err);
+      }
+    };
+
     watch(() => settings.darkMode, async (val) => {
       document.documentElement.classList.toggle('ipad-dark', val);
       await window.electronAPI.saveSettings({ darkMode: val });
@@ -209,7 +371,72 @@ export default {
       }
     };
 
-    const onAppClick = (n) => console.log("点击应用", n);
+    const launchApp = (app) => {
+      if (app.path) {
+        window.electronAPI.launchApp(app.path);
+      }
+    };
+
+    const ipadWindowRef = ref(null);
+    
+
+    const showContextMenu = (e, index) => {
+      console.log('显示上下文菜单', e, index);
+      e.preventDefault();
+      e.stopPropagation();
+      contextMenu.visible = true;
+      contextMenu.x = e.clientX;
+      contextMenu.y = e.clientY;
+      contextMenu.appIndex = index;
+      console.log('上下文菜单状态:', contextMenu);
+    };
+
+    const addApp = () => {
+      contextMenu.visible = false;
+      showAddAppModal.value = true;
+    };
+
+    const removeApp = (index) => {
+      try {
+        contextMenu.visible = false;
+        const newApps = [...settings.apps];
+        newApps.splice(index, 1);
+        window.electronAPI.saveSettings({ 
+          apps: newApps.map(app => ({
+            name: app.name,
+            path: app.path,
+            icon: app.icon
+          }))
+        });
+        settings.apps = newApps;
+      } catch (err) {
+        console.error('删除应用失败:', err);
+      }
+    };
+
+    const confirmAddApp = () => {
+      if (newApp.name && newApp.path) {
+        try {
+          const updatedApps = [...settings.apps, { ...newApp }];
+          window.electronAPI.saveSettings({ 
+            apps: updatedApps.map(app => ({
+              name: app.name,
+              path: app.path,
+              icon: app.icon
+            }))
+          });
+          settings.apps = updatedApps;
+          showAddAppModal.value = false;
+          Object.assign(newApp, {
+            name: '',
+            path: '',
+            icon: ''
+          });
+        } catch (err) {
+          console.error('添加应用失败:', err);
+        }
+      }
+    };
 
     onMounted(() => {
       updateTime();
@@ -217,6 +444,14 @@ export default {
       timeTimer = setInterval(updateTime, 60000);
       batteryTimer = setInterval(updateBatteryStatus, 300000);
       loadSettings();
+
+      window.electronAPI.handleContextMenu(({x, y}) => {
+        console.log('接收到右键事件', {x, y});
+        contextMenu.visible = true;
+        contextMenu.x = x;
+        contextMenu.y = y;
+        contextMenu.appIndex = -1;
+      });
     });
     onUnmounted(() => {
       clearInterval(timeTimer);
@@ -232,250 +467,14 @@ export default {
       currentTime, currentDate, batteryLevel, currentView,
       settings, openSettings, goHome,
       toggleTimeColor, toggleDarkMode, toggleLayoutMode,
-      uploadWallpaper, selectScreenshotPath, onAppClick
+      uploadWallpaper, selectScreenshotPath, selectAppPath,
+      launchApp, showContextMenu, addApp, removeApp, confirmAddApp,
+      showAddAppModal, newApp, contextMenu
     };
   },
 };
 </script>
 
 <style src="../styles/ipad.css"></style>
-<style scoped>
-:root {
-  --ipad-bg: #f0f0f5;
-}
 
-.ipad-window {
-  background: var(--ipad-bg);
-}
 
-/* 暗黑模式 */
-.ipad-dark .ipad-window {
-  background: #1c1c1e;
-}
-
-.ipad-dark .ipad-header,
-.ipad-dark .ipad-footer {
-  background: rgba(30, 30, 30, 0.8);
-}
-
-.ipad-dark .ipad-footer .ipad-app-icon::after {
-  color: #fff;
-}
-
-.text-white,
-.text-white .ipad-status-time,
-.text-white .ipad-status-icons,
-.text-white .ipad-status-icons span {
-  color: white !important;
-}
-
-/* iPad 内容面板 */
-.ipad-content {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-}
-
-/* 设置页面样式 - iPad Air5 风格 */
-.settings-container {
-  flex: 1;
-  padding: 24px;
-  overflow-y: auto;
-  color: #333;
-  font-family: -apple-system, BlinkMacSystemFont, "Helvetica Neue", "Segoe UI", sans-serif;
-  background: rgba(255, 255, 255, 0.8);
-  backdrop-filter: blur(30px) saturate(180%);
-  border-radius: 16px;
-  margin: 16px;
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
-  transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
-}
-
-.ipad-dark .settings-container {
-  color: #f5f5f7;
-  background: rgba(28, 28, 30, 0.85);
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
-  backdrop-filter: blur(40px) saturate(160%);
-}
-
-.settings-header {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-  margin-bottom: 28px;
-  padding-bottom: 12px;
-  border-bottom: 1px solid rgba(0, 0, 0, 0.1);
-}
-
-.ipad-dark .settings-header {
-  border-bottom-color: rgba(255, 255, 255, 0.1);
-}
-
-.back-btn {
-  background: none;
-  border: none;
-  font-size: 18px;
-  cursor: pointer;
-  color: inherit;
-  transition: opacity 0.2s ease;
-}
-
-.back-btn:hover {
-  opacity: 0.7;
-}
-
-.settings-header h3 {
-  margin: 0;
-  font-size: 22px;
-  font-weight: 600;
-}
-
-.setting-item {
-  margin-bottom: 24px;
-  padding: 18px 20px;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  background: rgba(255, 255, 255, 0.7);
-  border-radius: 12px;
-  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
-}
-
-.ipad-dark .setting-item {
-  background: rgba(44, 44, 46, 0.7);
-  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.2);
-}
-
-.setting-item:hover {
-  background: rgba(255, 255, 255, 0.8);
-}
-
-.ipad-dark .setting-item:hover {
-  background: rgba(80, 80, 80, 0.8);
-}
-
-.setting-item label {
-  font-size: 17px;
-  font-weight: 500;
-}
-
-.toggle-switch {
-  width: 50px;
-  height: 30px;
-  background: #e0e0e0;
-  border-radius: 15px;
-  position: relative;
-  cursor: pointer;
-  transition: background 0.3s ease;
-}
-
-.toggle-switch.active {
-  background: #007aff;
-}
-
-.toggle-switch .slider {
-  width: 26px;
-  height: 26px;
-  background: white;
-  border-radius: 50%;
-  position: absolute;
-  top: 2px;
-  left: 2px;
-  transition: all 0.3s ease;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
-}
-
-.toggle-switch .slider.active {
-  left: 22px;
-}
-
-.ipad-dark .toggle-switch {
-  background: #444;
-}
-
-.ipad-dark .toggle-switch.active {
-  background: #0062cc;
-}
-
-.ipad-dark .toggle-switch .slider {
-  background: white;
-}
-
-.setting-item select {
-  padding: 8px 12px;
-  font-size: 16px;
-  border-radius: 8px;
-  border: 1px solid rgba(0, 0, 0, 0.1);
-  background: rgba(255, 255, 255, 0.8);
-}
-
-.ipad-dark .setting-item select {
-  background: rgba(60, 60, 60, 0.8);
-  border-color: rgba(255, 255, 255, 0.1);
-  color: #eee;
-}
-
-.wallpaper-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  width: 100%;
-  margin-bottom: 12px;
-}
-
-.upload-wallpaper {
-  position: relative;
-}
-
-.upload-wallpaper input[type="file"] {
-  position: absolute;
-  width: 0.1px;
-  height: 0.1px;
-  opacity: 0;
-  overflow: hidden;
-  z-index: -1;
-}
-
-.upload-btn {
-  display: inline-block;
-  padding: 8px 16px;
-  background: #007aff;
-  color: white;
-  border-radius: 8px;
-  font-size: 14px;
-  cursor: pointer;
-  transition: all 0.2s ease;
-}
-
-.upload-btn:hover {
-  background: #0062cc;
-  transform: translateY(-1px);
-}
-
-.ipad-dark .upload-btn {
-  background: #0062cc;
-}
-
-.ipad-dark .upload-btn:hover {
-  background: #0052a3;
-}
-
-.settings-container {
-  scrollbar-width: thin;
-  scrollbar-color: rgba(0, 0, 0, 0.2) transparent;
-}
-
-.settings-container::-webkit-scrollbar {
-  width: 6px;
-}
-
-.settings-container::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-.settings-container::-webkit-scrollbar-thumb {
-  background: rgba(0, 0, 0, 0.2);
-  border-radius: 3px;
-}
-</style>

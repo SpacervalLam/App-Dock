@@ -66,7 +66,7 @@ export default {
       document.removeEventListener("mouseup", onMouseUpDrag);
       justReleased = true;
 
-      if (currentIPadWidth.value < 300) {
+      if (currentIPadWidth.value < 450) {
         currentIPadWidth.value = 0;
         emit("open-ipad", 0);
         isActive.value = false;

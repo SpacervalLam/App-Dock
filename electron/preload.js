@@ -28,9 +28,19 @@ contextBridge.exposeInMainWorld("electronAPI", {
 
   viewerReady: () => ipcRenderer.send("viewer-ready"),
   openDirectoryDialog: () => ipcRenderer.invoke("open-directory-dialog"),
+  showOpenDialog: (options) => ipcRenderer.invoke("show-open-dialog", options),
   saveSettings: (settings) => ipcRenderer.invoke("save-settings", settings),
   loadSettings: () => ipcRenderer.invoke("load-settings"),
   saveWallpaper: (fileBuffer) => ipcRenderer.invoke("save-wallpaper", fileBuffer),
   getFirstWallpaper: () => ipcRenderer.invoke("get-first-wallpaper"),
-
+  launchApp: (path) => ipcRenderer.invoke("launch-app", path),
+  
+  handleContextMenu: (callback) => {
+    window.addEventListener('contextmenu', (e) => {
+      e.preventDefault();
+      callback({ x: e.clientX, y: e.clientY });
+    });
+  },
+  
+  getAppIcon: (path) => ipcRenderer.invoke("get-app-icon", path)
 });

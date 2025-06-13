@@ -9,6 +9,7 @@ const {
   clipboard,
   powerMonitor,
 } = require("electron");
+const { exec } = require('child_process');
 const path = require("path");
 const fs = require("fs");
 
@@ -239,7 +240,8 @@ function initConfig() {
       darkMode: false,
       language: 'zh',
       layoutMode: 'dense',
-      isWhiteText: false
+      isWhiteText: false,
+      apps: []
     };
     fs.writeFileSync(configPath, JSON.stringify(defaults, null, 2), 'utf-8');
     console.log('⚙️ 已初始化默认配置:', configPath);
@@ -247,10 +249,21 @@ function initConfig() {
     console.log('⚙️ 配置文件已存在，跳过初始化:', configPath);
   }
 }
-ipcMain.handle('open-directory-dialog', async () => {
-  const { canceled, filePaths } = await dialog.showOpenDialog({
+ipcMain.handle('show-open-dialog', async (event, options) => {
+  const win = BrowserWindow.fromWebContents(event.sender);
+  const result = await dialog.showOpenDialog(win, {
+    ...options,
+    modal: true
+  });
+  return result;
+});
+
+ipcMain.handle('open-directory-dialog', async (event) => {
+  const win = BrowserWindow.fromWebContents(event.sender);
+  const { canceled, filePaths } = await dialog.showOpenDialog(win, {
     properties: ['openDirectory'],
-    title: '选择截屏保存目录'
+    title: '选择截屏保存目录',
+    modal: true
   });
   return { canceled, filePaths };
 });
@@ -293,13 +306,13 @@ function loadSettingsSync() {
     const raw = fs.readFileSync(configPath, 'utf-8');
     if (!raw.trim()) throw new Error('空文件');
     const loaded = JSON.parse(raw);
-    // 用默认项补齐缺失字段
     return {
       darkMode: false,
       language: 'zh',
       layoutMode: 'dense',
       screenshotPath: '',
       isWhiteText: false,
+      apps: [],
       ...loaded
     };
   } catch (err) {
@@ -333,6 +346,68 @@ ipcMain.handle('save-wallpaper', async (_, fileBuffer) => {
     throw err;
   }
 });
+
+// 启动应用程序
+ipcMain.handle('launch-app', async (_, appPath) => {
+  return new Promise((resolve, reject) => {
+    try {
+      // Normalize path and wrap in quotes if contains spaces
+      const normalizedPath = path.normalize(appPath);
+      const command = normalizedPath.includes(' ') ? `"${normalizedPath}"` : normalizedPath;
+      
+      exec(command, (error, stdout, stderr) => {
+        if (error) {
+          console.error(`执行错误: ${error}`);
+          reject(`无法启动程序: ${error.message}`);
+          return;
+        }
+        if (stderr) {
+          console.error(`stderr: ${stderr}`);
+        }
+        console.log(`stdout: ${stdout}`);
+        resolve(true);
+      });
+    } catch (err) {
+      console.error('启动应用失败:', err);
+      reject(`启动应用失败: ${err.message}`);
+    }
+  });
+});
+
+ipcMain.handle('get-app-icon', async (_, targetPath) => {
+  try {
+    const normalized = path.normalize(targetPath);
+    if (!fs.existsSync(normalized)) {
+      console.error('路径不存在:', normalized);
+      return '';
+    }
+
+    const ext = path.extname(normalized).toLowerCase();
+    const imageExts = ['.png', '.jpg', '.jpeg', '.gif', '.bmp', '.webp'];
+
+    let img;
+
+    if (imageExts.includes(ext)) {
+      img = nativeImage.createFromPath(normalized);
+    } else {
+      img = await app.getFileIcon(normalized, { size: 'large' });
+    }
+
+    if (img.isEmpty()) {
+      const defaultIcon = path.join(__dirname, 'assets', 'default-app-icon.png');
+      if (fs.existsSync(defaultIcon)) {
+        img = nativeImage.createFromPath(defaultIcon);
+      }
+    }
+
+    return img.isEmpty() ? '' : img.toDataURL();
+  }
+  catch (err) {
+    console.error('获取图标失败:', err);
+    return '';
+  }
+});
+
 
 ipcMain.handle('get-first-wallpaper', async () => {
   const wallpaperDir = getWallpaperDir();
@@ -372,7 +447,8 @@ async function createWindow(settings) {
     skipTaskbar: true,
     minimizable: false,
     closable: false,
-    webSecurity: false, 
+    webSecurity: false,
+    contextIsolation: false,
     webPreferences: {
       preload: path.join(__dirname, "preload.js"),
       nodeIntegration: false,
@@ -383,8 +459,8 @@ async function createWindow(settings) {
     },
   });
 
-  // 启动时保持透明穿透，并置于顶层
-  mainWindow.setIgnoreMouseEvents(true, { forward: true });
+  // 启动时允许鼠标交互
+  mainWindow.setIgnoreMouseEvents(false);
   mainWindow.setAlwaysOnTop(true, "screen-saver");
 
   if (!app.isPackaged) {
