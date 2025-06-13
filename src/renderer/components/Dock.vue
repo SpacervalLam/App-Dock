@@ -10,13 +10,13 @@
         <div class="dock-icons">
           <!-- Dock 图标区域 -->
           <div class="dock-icon" title="屏幕截图" @click.stop="onScreenshotClick">📷</div>
-          <div class="dock-icon" title="文字识别" @click.stop="onOCRClick">🔍</div>
+          <div class="dock-icon" title="浏览器">🌐</div>
           <div class="dock-icon" title="浏览器">🌐</div>
           <div class="dock-icon" title="设置">⚙️</div>
           <div class="dock-icon" title="邮件">✉️</div>
           <div class="dock-icon" title="音乐">🎵</div>
           <div class="dock-icon" title="照片">🖼️</div>
-          <div class="dock-icon" title="计算器">🧮</div>
+          <div class="dock-icon" title="任务管理器" @click.stop="onTaskManagerClick">📊</div>
         </div>
       </div>
     </div>
@@ -126,6 +126,14 @@ export default {
       screenshotActive.value = false;
     };
 
+    const onTaskManagerClick = async () => {
+      try {
+        await window.electronAPI.openTaskManager();
+      } catch (err) {
+        console.error('打开任务管理器失败:', err);
+      }
+    };
+
 
 
 
@@ -164,6 +172,7 @@ export default {
       onDockMouseLeave,
       currentIPadWidth,
       onScreenshotClick,
+      onTaskManagerClick,
       emitOpen: (w) => emit("open-ipad", w),
     };
   },

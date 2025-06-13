@@ -409,6 +409,24 @@ ipcMain.handle('get-app-icon', async (_, targetPath) => {
 });
 
 
+ipcMain.handle('open-task-manager', async () => {
+  return new Promise((resolve, reject) => {
+    exec('start "" /max taskmgr', (error, stdout, stderr) => {
+      if (error) {
+        console.error(`打开任务管理器失败: ${error}`);
+        reject(`无法打开任务管理器: ${error.message}`);
+        return;
+      }
+      if (stderr) {
+        console.error(`stderr: ${stderr}`);
+      }
+      console.log(`stdout: ${stdout}`);
+      resolve(true);
+    });
+  });
+});
+
+
 ipcMain.handle('get-first-wallpaper', async () => {
   const wallpaperDir = getWallpaperDir();
   try {

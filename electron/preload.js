@@ -42,5 +42,6 @@ contextBridge.exposeInMainWorld("electronAPI", {
     });
   },
   
-  getAppIcon: (path) => ipcRenderer.invoke("get-app-icon", path)
+  getAppIcon: (path) => ipcRenderer.invoke("get-app-icon", path),
+  openTaskManager: () => ipcRenderer.invoke("open-task-manager")
 });
