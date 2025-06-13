@@ -126,14 +126,11 @@ export default {
       }
     };
 
-    const onOutsideClick = (e) => {
-      if (justReleased) {
-        justReleased = false;
-        return;
-      }
-      console.log("点击了外部区域，关闭 iPad 窗口");
+    // 双击 iPad 窗口内部时关闭
+    const onIpadDoubleClick = (e) => {
       if (currentIPadWidth.value <= 0) return;
-      if (!e.target.closest(".ipad-window")) {
+      const ipadWin = document.querySelector('.ipad-window');
+      if (ipadWin && ipadWin.contains(e.target)) {
         resetIPadState();
       }
     };
@@ -163,7 +160,7 @@ export default {
 
     onMounted(() => {
       window.addEventListener("mousemove", onDetectEdge);
-      window.addEventListener("click", onOutsideClick);
+      window.addEventListener("dblclick", onIpadDoubleClick);
       window.addEventListener("contextmenu", onRightClick);
       window.addEventListener("retract-dock", () => {
         isActive.value = false;
@@ -178,7 +175,7 @@ export default {
     });
     onUnmounted(() => {
       window.removeEventListener("mousemove", onDetectEdge);
-      window.removeEventListener("click", onOutsideClick);
+      window.removeEventListener("dblclick", onIpadDoubleClick);
       window.removeEventListener("retract-dock", () => {
         isActive.value = false;
         window.electronAPI.disableInteraction();
