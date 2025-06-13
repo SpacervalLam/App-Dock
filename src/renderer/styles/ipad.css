@@ -661,10 +661,42 @@
   background: #555;
 }
 
+.icon-upload-group {
+  display: flex;
+  gap: 8px;
+  margin-top: 8px;
+  align-items: center;
+}
+
+.icon-upload-group .upload-btn {
+  padding: 8px 12px;
+  background-color: #e0e0e0;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.icon-upload-group .upload-btn:hover {
+  background-color: #d0d0d0;
+}
+
+.icon-upload-group .clear-btn {
+  padding: 8px 12px;
+  background-color: #f0f0f0;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.icon-upload-group .clear-btn:hover {
+  background-color: #e0e0e0;
+}
+
 .path-input-group {
   display: flex;
-  gap: 10px;
-  width: 100%;
+  gap: 8px;
+  margin-top: 8px;
 }
 
 .path-input-group input {

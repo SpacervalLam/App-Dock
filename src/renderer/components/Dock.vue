@@ -67,10 +67,7 @@ export default {
       justReleased = true;
 
       if (currentIPadWidth.value < 450) {
-        currentIPadWidth.value = 0;
-        emit("open-ipad", 0);
-        isActive.value = false;
-        window.electronAPI.disableInteraction();
+        resetIPadState();
         setTimeout(() => {
           justReleased = false;
         }, 50);
@@ -105,17 +102,39 @@ export default {
       }
     };
 
+    const resetIPadState = () => {
+      currentIPadWidth.value = 0;
+      emit("open-ipad", 0);
+      isActive.value = false;
+      window.electronAPI.disableInteraction();
+    };
+
+    const onRightClick = (e) => {
+      if (currentIPadWidth.value <= 0) return;
+      const ipadWindow = document.querySelector('.ipad-window');
+      if (ipadWindow && ipadWindow.contains(e.target)) {
+        e.preventDefault();
+        e.stopPropagation();
+        window.dispatchEvent(new CustomEvent('ipad-contextmenu', {
+          detail: {
+            x: e.clientX,
+            y: e.clientY,
+            target: e.target.closest('.ipad-app-icon') ? 
+              Array.from(document.querySelectorAll('.ipad-app-icon')).indexOf(e.target.closest('.ipad-app-icon')) : -1
+          }
+        }));
+      }
+    };
+
     const onOutsideClick = (e) => {
       if (justReleased) {
         justReleased = false;
         return;
       }
+      console.log("点击了外部区域，关闭 iPad 窗口");
       if (currentIPadWidth.value <= 0) return;
       if (!e.target.closest(".ipad-window")) {
-        currentIPadWidth.value = 0;
-        emit("open-ipad", 0);
-        isActive.value = false;
-        window.electronAPI.disableInteraction();
+        resetIPadState();
       }
     };
 
@@ -134,13 +153,17 @@ export default {
       }
     };
 
-
-
-
     onMounted(() => {
       window.addEventListener("mousemove", onDetectEdge);
       window.addEventListener("click", onOutsideClick);
+      window.addEventListener("contextmenu", onRightClick);
       window.addEventListener("retract-dock", () => {
+        isActive.value = false;
+        window.electronAPI.disableInteraction();
+      });
+      window.addEventListener("ipad-window-close", () => {
+        currentIPadWidth.value = 0;
+        emit("open-ipad", 0);
         isActive.value = false;
         window.electronAPI.disableInteraction();
       });
@@ -173,6 +196,7 @@ export default {
       currentIPadWidth,
       onScreenshotClick,
       onTaskManagerClick,
+      resetIPadState,
       emitOpen: (w) => emit("open-ipad", w),
     };
   },

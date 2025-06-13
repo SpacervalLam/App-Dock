@@ -26,7 +26,6 @@
           :key="index"
           :data-label="app.name"
           @click="launchApp(app)"
-          @contextmenu.prevent="showContextMenu($event, index)"
         >
           <img v-if="app.icon" :src="app.icon" class="app-icon" />
           <span v-else>📱</span>
@@ -61,13 +60,35 @@
             </div>
 
             <div class="form-group">
+              <label>应用图标</label>
+              <div class="icon-upload-group">
+                <input 
+                  id="iconUpload"
+                  type="file" 
+                  accept="image/*"
+                  @change="handleIconUpload"
+                  style="display: none"
+                >
+                <label for="iconUpload" class="upload-btn">选择图标</label>
+                <button 
+                  v-if="customIcon" 
+                  class="clear-btn"
+                  @click.stop="clearCustomIcon"
+                >
+                  清除
+                </button>
+              </div>
+            </div>
+
+            <div class="form-group">
               <label>应用路径 <span class="required">*</span></label>
               <div class="path-input-group">
                 <input 
                   v-model="newApp.path" 
                   type="text" 
-                  placeholder="输入应用路径或点击浏览选择" 
+                  placeholder="点击浏览选择" 
                   required
+                  readonly
                   @input="handlePathChange"
                   @keyup.enter="handlePathChange"
                 >
@@ -232,6 +253,7 @@ export default {
     });
 
     const appIconPreview = ref('');
+    const customIcon = ref(false);
     
     const selectAppPath = async () => {
       console.log('点击浏览按钮');
@@ -262,16 +284,41 @@ export default {
           const appName = fileName.replace(/\.[^/.]+$/, '');
           newApp.name = appName;
           
-          window.electronAPI.getAppIcon(path).then(icon => {
-            appIconPreview.value = icon;
-            newApp.icon = icon;
-          }).catch(() => {
-            appIconPreview.value = '';
-            newApp.icon = '';
-          });
+          // 如果用户没有上传自定义图标，才获取默认图标
+          if (!customIcon.value) {
+            window.electronAPI.getAppIcon(path).then(icon => {
+              appIconPreview.value = icon;
+              newApp.icon = icon;
+            }).catch(() => {
+              appIconPreview.value = '';
+              newApp.icon = '';
+            });
+          }
         }
       } catch (err) {
         console.error('解析路径失败:', err);
+      }
+    };
+
+    const handleIconUpload = (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+      
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        appIconPreview.value = event.target.result;
+        newApp.icon = event.target.result;
+        customIcon.value = true;
+      };
+      reader.readAsDataURL(file);
+    };
+
+    const clearCustomIcon = () => {
+      customIcon.value = false;
+      appIconPreview.value = '';
+      newApp.icon = '';
+      if (newApp.path) {
+        handlePathChange(newApp.path); // 重新获取默认图标
       }
     };
 
@@ -371,9 +418,17 @@ export default {
       }
     };
 
-    const launchApp = (app) => {
+    const launchApp = async (app) => {
       if (app.path) {
-        window.electronAPI.launchApp(app.path);
+        try {
+          await window.electronAPI.launchApp(app.path);
+          // 通知Dock执行完整关闭流程
+          window.dispatchEvent(new CustomEvent("ipad-window-close", {
+            detail: { shouldClose: true }
+          }));
+        } catch (err) {
+          console.error('启动应用失败:', err);
+        }
       }
     };
 
@@ -417,7 +472,13 @@ export default {
     const confirmAddApp = () => {
       if (newApp.name && newApp.path) {
         try {
-          const updatedApps = [...settings.apps, { ...newApp }];
+          const appToAdd = {
+            name: newApp.name,
+            path: newApp.path,
+            icon: appIconPreview.value || '' // 确保使用当前预览的图标
+          };
+          
+          const updatedApps = [...settings.apps, appToAdd];
           window.electronAPI.saveSettings({ 
             apps: updatedApps.map(app => ({
               name: app.name,
@@ -425,13 +486,15 @@ export default {
               icon: app.icon
             }))
           });
+          
           settings.apps = updatedApps;
           showAddAppModal.value = false;
-          Object.assign(newApp, {
-            name: '',
-            path: '',
-            icon: ''
-          });
+          // 重置表单
+          newApp.name = '';
+          newApp.path = '';
+          newApp.icon = '';
+          appIconPreview.value = '';
+          customIcon.value = false;
         } catch (err) {
           console.error('添加应用失败:', err);
         }
@@ -445,12 +508,11 @@ export default {
       batteryTimer = setInterval(updateBatteryStatus, 300000);
       loadSettings();
 
-      window.electronAPI.handleContextMenu(({x, y}) => {
-        console.log('接收到右键事件', {x, y});
+      window.addEventListener('ipad-contextmenu', (e) => {
         contextMenu.visible = true;
-        contextMenu.x = x;
-        contextMenu.y = y;
-        contextMenu.appIndex = -1;
+        contextMenu.x = e.detail.x;
+        contextMenu.y = e.detail.y;
+        contextMenu.appIndex = e.detail.target;
       });
     });
     onUnmounted(() => {
@@ -469,12 +531,10 @@ export default {
       toggleTimeColor, toggleDarkMode, toggleLayoutMode,
       uploadWallpaper, selectScreenshotPath, selectAppPath,
       launchApp, showContextMenu, addApp, removeApp, confirmAddApp,
-      showAddAppModal, newApp, contextMenu
+      showAddAppModal, newApp, contextMenu, handleIconUpload, clearCustomIcon,
     };
   },
 };
 </script>
 
 <style src="../styles/ipad.css"></style>
-
-
