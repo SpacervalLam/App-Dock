@@ -43,5 +43,7 @@ contextBridge.exposeInMainWorld("electronAPI", {
   },
   
   getAppIcon: (path) => ipcRenderer.invoke("get-app-icon", path),
-  openTaskManager: () => ipcRenderer.invoke("open-task-manager")
+  openTaskManager: () => ipcRenderer.invoke("open-task-manager"),
+
+  openDefaultBrowser: (url) => ipcRenderer.invoke('open-default-browser', url)
 });

@@ -10,8 +10,8 @@
         <div class="dock-icons">
           <!-- Dock 图标区域 -->
           <div class="dock-icon" title="屏幕截图" @click.stop="onScreenshotClick">📷</div>
-          <div class="dock-icon" title="浏览器">🌐</div>
-          <div class="dock-icon" title="浏览器">🌐</div>
+          <div class="dock-icon" title="浏览器" @click.stop="onBrowserClick">🌐</div>
+          <div class="dock-icon" title="菜单">☰</div>
           <div class="dock-icon" title="设置">⚙️</div>
           <div class="dock-icon" title="邮件">✉️</div>
           <div class="dock-icon" title="音乐">🎵</div>
@@ -119,7 +119,7 @@ export default {
           detail: {
             x: e.clientX,
             y: e.clientY,
-            target: e.target.closest('.ipad-app-icon') ? 
+            target: e.target.closest('.ipad-app-icon') ?
               Array.from(document.querySelectorAll('.ipad-app-icon')).indexOf(e.target.closest('.ipad-app-icon')) : -1
           }
         }));
@@ -150,6 +150,14 @@ export default {
         await window.electronAPI.openTaskManager();
       } catch (err) {
         console.error('打开任务管理器失败:', err);
+      }
+    };
+
+    const onBrowserClick = async () => {
+      try {
+        await window.electronAPI.openDefaultBrowser();
+      } catch (err) {
+        console.error('打开浏览器失败:', err);
       }
     };
 
@@ -196,6 +204,7 @@ export default {
       currentIPadWidth,
       onScreenshotClick,
       onTaskManagerClick,
+      onBrowserClick,
       resetIPadState,
       emitOpen: (w) => emit("open-ipad", w),
     };

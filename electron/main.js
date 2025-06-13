@@ -8,6 +8,7 @@ const {
   dialog,
   clipboard,
   powerMonitor,
+  shell,
 } = require("electron");
 const { exec, spawn } = require('child_process');
 const path = require("path");
@@ -172,6 +173,34 @@ function createViewerWindow(dataURL, displayWidth, displayHeight) {
     }, 50);
   });
 }
+
+function getWindowsDefaultBrowserPath() {
+  return new Promise((resolve, reject) => {
+    exec(
+      'reg query "HKEY_CLASSES_ROOT\\http\\shell\\open\\command" /ve',
+      (err, stdout, stderr) => {
+        if (err) return reject(err);
+        const m = stdout.match(/REG_[^ ]+\s+"?([^"]+\.exe)"/i);
+        if (m && m[1]) resolve(m[1]);
+        else reject(new Error('Failed to parse browser path from registry'));
+      }
+    );
+  });
+}
+
+ipcMain.handle('open-default-browser', async (event, url) => {
+  if (process.platform === 'win32') {
+    try {
+      const exePath = await getWindowsDefaultBrowserPath();
+      exec(`start "" "${exePath}"`);
+    } catch (e) {
+      console.error('Failed to launch default browser, fallback to about:blank:', e);
+      await shell.openExternal(url || 'about:blank');
+    }
+  } else {
+    await shell.openExternal(url || 'about:blank');
+  }
+});
  
 // 电池状态处理
 let currentBatteryLevel = 100;
