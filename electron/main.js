@@ -148,7 +148,7 @@ function createViewerWindow(dataURL, displayWidth, displayHeight) {
   const url = `${baseURL}?viewer=true`;
   viewer.loadURL(url);
  
-  // 等待渲染层“展示组件”就绪后，再发送图片
+  // 等待渲染层"展示组件"就绪后，再发送图片
   ipcMain.once("viewer-ready", () => {
     viewer.webContents.send("init-image", { dataURL });
   });
@@ -189,16 +189,20 @@ function getWindowsDefaultBrowserPath() {
 }
 
 ipcMain.handle('open-default-browser', async (event, url) => {
-  if (process.platform === 'win32') {
-    try {
-      const exePath = await getWindowsDefaultBrowserPath();
-      exec(`start "" "${exePath}"`);
-    } catch (e) {
-      console.error('Failed to launch default browser, fallback to about:blank:', e);
-      await shell.openExternal(url || 'about:blank');
-    }
+  if (url) {
+    await shell.openExternal(url);
   } else {
-    await shell.openExternal(url || 'about:blank');
+    if (process.platform === 'win32') {
+      try {
+        const exePath = await getWindowsDefaultBrowserPath();
+        exec(`start "" "${exePath}"`);
+      } catch (e) {
+        console.error('Failed to launch default browser, fallback to about:blank:', e);
+        await shell.openExternal('about:blank');
+      }
+    } else {
+      await shell.openExternal('about:blank');
+    }
   }
 });
  
@@ -270,7 +274,8 @@ function initConfig() {
       language: 'zh',
       layoutMode: 'dense',
       isWhiteText: false,
-      apps: []
+      apps: [],
+      bookmarks: []
     };
     fs.writeFileSync(configPath, JSON.stringify(defaults, null, 2), 'utf-8');
     console.log('⚙️ 已初始化默认配置:', configPath);
@@ -355,7 +360,8 @@ function loadSettingsSync() {
       language: 'zh',
       layoutMode: 'dense',
       screenshotPath: '',
-      isWhiteText: false
+      isWhiteText: false,
+      bookmarks: []
     };
     // 覆写文件
     fs.writeFileSync(configPath, JSON.stringify(defaults, null, 2), 'utf-8');

@@ -16,7 +16,8 @@
   "dependencies": {
     "pinia": "^2.0.0",
     "tesseract.js": "^6.0.1",
-    "tesseract.js-core": "^6.0.0"
+    "tesseract.js-core": "^6.0.0",
+    "windows-shortcuts": "^0.1.6"
   },
   "devDependencies": {
     "@vitejs/plugin-vue": "^4.1.0",

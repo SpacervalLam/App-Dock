@@ -19,13 +19,15 @@
     <!-- 主体内容：根据 currentView 切换 Home 或 Settings -->
     <div class="ipad-content">
       <!-- Home Screen -->
-      <div v-if="currentView === 'home'" class="ipad-grid" :class="settings.layoutMode">
+      <div v-if="currentView === 'home'" class="ipad-grid" :class="settings.layoutMode"
+           @contextmenu="showContextMenu($event, -1)">
         <div 
           class="ipad-app-icon" 
           v-for="(app, index) in settings.apps" 
           :key="index"
           :data-label="app.name"
           @click="launchApp(app)"
+          @contextmenu.stop="showContextMenu($event, index)"
         >
           <img v-if="app.icon" :src="app.icon" class="app-icon" />
           <span v-else>📱</span>
@@ -188,7 +190,7 @@ import { ref, reactive, onMounted, onUnmounted, watch } from "vue";
 export default {
   name: "IPadWindow",
   props: { width: { type: Number, required: true, default: 0 } },
-  setup() {
+  setup(props) {
     const currentTime = ref("");
     const currentDate = ref("");
     const batteryLevel = ref(0);
@@ -422,10 +424,6 @@ export default {
       if (app.path) {
         try {
           await window.electronAPI.launchApp(app.path);
-          // 通知Dock执行完整关闭流程
-          window.dispatchEvent(new CustomEvent("ipad-window-close", {
-            detail: { shouldClose: true }
-          }));
         } catch (err) {
           console.error('启动应用失败:', err);
         }
@@ -538,3 +536,24 @@ export default {
 </script>
 
 <style src="../styles/ipad.css"></style>
+<style scoped>
+.ipad-close-btn {
+  position: absolute;
+  top: 12px;
+  right: 18px;
+  background: rgba(0,0,0,0.08);
+  border: none;
+  border-radius: 50%;
+  width: 32px;
+  height: 32px;
+  font-size: 18px;
+  color: #333;
+  cursor: pointer;
+  transition: background 0.2s;
+  z-index: 20;
+}
+.ipad-close-btn:hover {
+  background: rgba(255,0,0,0.15);
+  color: #d00;
+}
+</style>
